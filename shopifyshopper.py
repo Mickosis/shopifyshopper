@@ -12,6 +12,7 @@ import time
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from dhooks import Webhook
+from datetime import datetime
 
 def has_item():
     r = requests.get('https://shopifywebsite.com/products.json')
@@ -70,12 +71,11 @@ def buy_item(url):
     driver.find_element_by_xpath('//input[@id="checkout_payment_gateway_46824685701"]').click()
     
     #Send Discord Notification
-    print('Please complete payment!')
-    
     awake = True
     while (awake):
-            hook.send('Please complete payment!')
-            time.sleep(3)
+        print('Please complete payment!')
+        hook.send('Please complete payment!')
+        time.sleep(3)
     
 # Main Program
 
@@ -85,14 +85,21 @@ hook = Webhook('https://discord.com/api/webhooks/')
 # Monitoring Loop
 is_on = True
 while (is_on):
-        
-    store_url = has_item()
-    if store_url != False:
-        print('Product is Available!')
-        hook.send('Item is available!')
-        buy_item(store_url)
-        is_on = False
-    else:
-        print('Product Not Available')
-        # Set to specified interval (in Seconds)
-        time.sleep(300)
+
+    try:
+        now = datetime.now()
+        current_time = now.strftime("%H:%M:%S")
+        store_url = has_item()
+        if store_url != False:
+            print('Product is Available!')
+            hook.send('Product is available!')
+            buy_item(store_url)
+            is_on = False
+        else:
+            print(current_time + ' Product Not Yet Available')
+            hook.send(current_time + ' Product Not Yet Available')
+            # Set to specified interval (in Seconds)
+            time.sleep(300)
+    except KeyboardInterrupt:
+        print('Script stopped!')
+        break
