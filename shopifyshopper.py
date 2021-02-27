@@ -14,16 +14,41 @@ from selenium.webdriver.chrome.options import Options
 from dhooks import Webhook
 from datetime import datetime
 
+# Main Configuration
+
+json_url = 'https://shopifywebsite.com/products.json'
+shopify_url = 'https://shopifywebsite.com/products/'
+wanted_item = 'Product Name XL'
+chrome_driver_path = r'/Users/UserName/Desktop/chromedriver'
+hook = Webhook('https://discord.com/api/webhooks/')
+standby_interval = '180'
+
+# Shipping Info
+
+discount_code = 'DISC'
+email_address = 'mikasa@aot.net''
+first_name = 'Mikasa'
+last_name = 'Ackerman'
+address_1 = 'Liberio Internment Zone'
+address_2 = 'Shiganshina'
+city = 'Wall Rose'
+country = 'Eldia'
+city_state =  'Paradis Island'
+zip_code = '1337'
+
+
+# Main Functions
+
 def has_item():
-    r = requests.get('https://shopifywebsite.com/products.json')
+    r = requests.get(json_url)
     products = json.loads((r.text))['products']
     
     for product in products:
         
         product_name = product['title']
         
-        if (product_name == 'Product Name'):
-            product_url = 'https://shopifywebsite.com/products/' + product['handle']
+        if (product_name == wanted_item):
+            product_url = shopify_url + product['handle']
             return product_url
     else:    
         return False
@@ -32,7 +57,7 @@ def has_item():
 def buy_item(url):
     chrome_options = Options()
     chrome_options.add_experimental_option("detach", True)
-    driver = webdriver.Chrome(executable_path=r'/Users/UserName/Desktop/chromedriver', chrome_options=chrome_options)
+    driver = webdriver.Chrome(executable_path=chrome_driver_path, chrome_options=chrome_options)
     driver.get(str(url))
     
     #Add Item to Cart
@@ -41,27 +66,27 @@ def buy_item(url):
     driver.find_element_by_xpath('//a[@class="cart-popup__cta-link btn btn--secondary-accent"]').click()
     driver.find_element_by_xpath('//input[@class="cart__submit btn btn--small-wide"]').click()
     
-    driver.find_element_by_xpath('//input[@placeholder="Discount code"]').send_keys('PVRP')
+    driver.find_element_by_xpath('//input[@placeholder="Discount code"]').send_keys(discount_code)
     driver.find_element_by_xpath('//button[@class="field__input-btn btn"]').click()
     
     #Add Shipping Information
-    driver.find_element_by_xpath('//input[@placeholder="Email or mobile phone number"]').send_keys('Email')
+    driver.find_element_by_xpath('//input[@placeholder="Email or mobile phone number"]').send_keys(email_address)
     # time.sleep(0.5)
-    driver.find_element_by_xpath('//input[@placeholder="First name (optional)"]').send_keys('Mico')
+    driver.find_element_by_xpath('//input[@placeholder="First name (optional)"]').send_keys(first_name)
     # time.sleep(0.5)
-    driver.find_element_by_xpath('//input[@placeholder="Last name"]').send_keys('Rigunay')
+    driver.find_element_by_xpath('//input[@placeholder="Last name"]').send_keys(last_name)
     # time.sleep(0.5)
-    driver.find_element_by_xpath('//input[@placeholder="Address"]').send_keys('3407 East Marina Boulevard')
+    driver.find_element_by_xpath('//input[@placeholder="Address"]').send_keys(address_1)
     # time.sleep(0.5)
-    driver.find_element_by_xpath('//input[@placeholder="Apartment, suite, etc. (optional)"]').send_keys('Suite: 807-1980')
+    driver.find_element_by_xpath('//input[@placeholder="Apartment, suite, etc. (optional)"]').send_keys(address_2)
     # time.sleep(0.5)
-    driver.find_element_by_xpath('//input[@placeholder="City"]').send_keys('Burbank')
+    driver.find_element_by_xpath('//input[@placeholder="City"]').send_keys(city)
     # time.sleep(0.5)
-    driver.find_element_by_xpath('//select[@placeholder="Country/Region"]').send_keys('United States')
+    driver.find_element_by_xpath('//select[@placeholder="Country/Region"]').send_keys(country)
     # time.sleep(0.5)
-    driver.find_element_by_xpath('//select[@placeholder="State"]').send_keys('California')
+    driver.find_element_by_xpath('//select[@placeholder="State"]').send_keys(city_state)
     # time.sleep(0.5)
-    driver.find_element_by_xpath('//input[@placeholder="ZIP code"]').send_keys('661055')
+    driver.find_element_by_xpath('//input[@placeholder="ZIP code"]').send_keys(zip_code)
     
     #Check out to PayPal
     driver.find_element_by_xpath('//button[@class="step__footer__continue-btn btn"]').click()
@@ -79,9 +104,6 @@ def buy_item(url):
     
 # Main Program
 
-# Set Discord Webhook
-hook = Webhook('https://discord.com/api/webhooks/')
-
 # Monitoring Loop
 is_on = True
 while (is_on):
@@ -98,8 +120,7 @@ while (is_on):
         else:
             print(current_time + ' Product Not Yet Available')
             hook.send(current_time + ' Product Not Yet Available')
-            # Set to specified interval (in Seconds)
-            time.sleep(300)
+            time.sleep(standby_interval)
     except KeyboardInterrupt:
         print('Script stopped!')
         break
