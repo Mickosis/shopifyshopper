@@ -21,7 +21,7 @@ shopify_url = 'https://shopifywebsite.com/products/'
 wanted_item = 'Product Name XL'
 chrome_driver_path = r'/Users/UserName/Desktop/chromedriver'
 hook = Webhook('https://discord.com/api/webhooks/')
-standby_interval = '180'
+standby_interval = 180
 
 # Shipping Info
 
@@ -97,8 +97,7 @@ def buy_item(url):
     driver.find_element_by_xpath('//input[@id="checkout_payment_gateway_46824685701"]').click()
     
     #Send Discord Notification
-    awake = True
-    while (awake):
+    while True:
         print('Please complete payment!')
         hook.send('Please complete payment!')
         time.sleep(3)
@@ -106,8 +105,9 @@ def buy_item(url):
 # Main Program
 
 # Monitoring Loop
+print('====================MONITOR INITIATED====================')
+hook.send('====================MONITOR INITIATED====================')
 is_on = True
-
 while (is_on):
     try:
         now = datetime.now()
@@ -123,5 +123,6 @@ while (is_on):
             hook.send(current_time + ' Product Not Yet Available')
             time.sleep(standby_interval)      
     except KeyboardInterrupt:
-        print('Script stopped!')
+        print('====================MONITOR STOPPED====================')
+        hook.send('====================MONITOR STOPPED====================')
         break
