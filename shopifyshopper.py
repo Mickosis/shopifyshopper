@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Feb 26 14:00:00 2021
+Created on Fri Feb 26 04:20:00 2021
 
 @author: mickosis
 """
@@ -26,7 +26,7 @@ standby_interval = '180'
 # Shipping Info
 
 discount_code = 'DISC'
-email_address = 'mikasa@aot.net''
+email_address = 'mikasa@aot.net'
 first_name = 'Mikasa'
 last_name = 'Ackerman'
 address_1 = 'Liberio Internment Zone'
@@ -35,7 +35,6 @@ city = 'Wall Rose'
 country = 'Eldia'
 city_state =  'Paradis Island'
 zip_code = '1337'
-
 
 # Main Functions
 
@@ -55,6 +54,7 @@ def has_item():
 
 
 def buy_item(url):
+    #Start Chrome
     chrome_options = Options()
     chrome_options.add_experimental_option("detach", True)
     driver = webdriver.Chrome(executable_path=chrome_driver_path, chrome_options=chrome_options)
@@ -64,10 +64,13 @@ def buy_item(url):
     driver.find_element_by_xpath('//button[@class="btn product-form__cart-submit btn--secondary-accent"]').click()
     time.sleep(3)
     driver.find_element_by_xpath('//a[@class="cart-popup__cta-link btn btn--secondary-accent"]').click()
+    # time.sleep(0.5)
     driver.find_element_by_xpath('//input[@class="cart__submit btn btn--small-wide"]').click()
-    
+    # time.sleep(0.5)
     driver.find_element_by_xpath('//input[@placeholder="Discount code"]').send_keys(discount_code)
+    # time.sleep(0.5)
     driver.find_element_by_xpath('//button[@class="field__input-btn btn"]').click()
+    # time.sleep(0.5)
     
     #Add Shipping Information
     driver.find_element_by_xpath('//input[@placeholder="Email or mobile phone number"]').send_keys(email_address)
@@ -87,12 +90,13 @@ def buy_item(url):
     driver.find_element_by_xpath('//select[@placeholder="State"]').send_keys(city_state)
     # time.sleep(0.5)
     driver.find_element_by_xpath('//input[@placeholder="ZIP code"]').send_keys(zip_code)
+    # time.sleep(0.5)
     
     #Check out to PayPal
     driver.find_element_by_xpath('//button[@class="step__footer__continue-btn btn"]').click()
-    
+    # time.sleep(0.5)
     driver.find_element_by_xpath('//button[@class="step__footer__continue-btn btn"]').click()
-    
+    # time.sleep(0.5)
     driver.find_element_by_xpath('//input[@id="checkout_payment_gateway_46824685701"]').click()
     
     #Send Discord Notification
@@ -107,7 +111,6 @@ def buy_item(url):
 # Monitoring Loop
 is_on = True
 while (is_on):
-
     try:
         now = datetime.now()
         current_time = now.strftime("%H:%M:%S")
