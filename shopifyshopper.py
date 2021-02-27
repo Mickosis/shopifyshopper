@@ -40,12 +40,9 @@ zip_code = '1337'
 
 def has_item():
     r = requests.get(json_url)
-    products = json.loads((r.text))['products']
-    
+    products = json.loads((r.text))['products'] 
     for product in products:
-        
         product_name = product['title']
-        
         if (product_name == wanted_item):
             product_url = shopify_url + product['handle']
             return product_url
@@ -110,6 +107,7 @@ def buy_item(url):
 
 # Monitoring Loop
 is_on = True
+
 while (is_on):
     try:
         now = datetime.now()
@@ -123,7 +121,7 @@ while (is_on):
         else:
             print(current_time + ' Product Not Yet Available')
             hook.send(current_time + ' Product Not Yet Available')
-            time.sleep(standby_interval)
+            time.sleep(standby_interval)      
     except KeyboardInterrupt:
         print('Script stopped!')
         break
