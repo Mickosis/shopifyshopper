@@ -10,7 +10,6 @@ import socket
 import requests
 import json
 import time
-import os
 from twilio.rest import Client
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -160,7 +159,7 @@ while is_on:
         now = datetime.now()
         current_time = now.strftime("%H:%M:%S")
         store_url = has_item()
-        if store_url != False:
+        if store_url is not False:
             print(f"[{current_time}]: Attempting to purchase {store_url}...")
             hook.send(f"[{current_time}]: Attempting to purchase {store_url}...")
             buy_item(store_url)

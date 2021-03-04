@@ -10,7 +10,6 @@ import socket
 import requests
 import json
 import time
-import os
 from twilio.rest import Client
 from dhooks import Webhook
 from datetime import datetime
@@ -68,7 +67,7 @@ while is_on:
         r = requests.get(json_url)
         products = json.loads((r.text))["products"]
         item_name = has_item(products)
-        if item_name != False:
+        if item_name is not False:
             print(f"[{current_time}]: Product {item_name} is available!")
             hook.send(f"[{current_time}]: Product {item_name} is available!")
             aws_hook.send(f"[{current_time}]: Product {item_name} is available!")
