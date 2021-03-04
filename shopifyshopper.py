@@ -6,6 +6,7 @@ Created on Fri Feb 26 04:20:00 2021
 @author: mickosis
 """
 
+import socket
 import requests
 import json
 import time
@@ -20,7 +21,7 @@ from datetime import datetime
 
 json_url = "https://shopifywebsite.com/products.json"
 shopify_url = "https://shopifywebsite.com/products/"
-wanted_item = "Product Name XL"
+wanted_items = ["Product 1", "Product 2," "Product 3"]
 chrome_driver_path = r"/Users/UserName/Desktop/chromedriver"
 hook = Webhook("https://discord.com/api/webhooks/")
 standby_interval = 180
@@ -28,6 +29,7 @@ account_sid = "account_sid"
 auth_token = "auth_token"
 phone_number = "phone_number"
 twilio_number = "twilio_number"
+twilio_url = "http://demo.twilio.com/docs/voice.xml"
 
 # Shipping Info
 
@@ -48,13 +50,14 @@ zip_code = "1337"
 def has_item():
     r = requests.get(json_url)
     products = json.loads((r.text))["products"]
-    for product in products:
-        product_name = product["title"]
-        if product_name == wanted_item:
-            product_url = shopify_url + product["handle"]
-            return product_url
-    else:
-        return False
+    for i in range(len(wanted_items)):
+        for product in products:
+            product_name = product["title"]
+            if wanted_items[i] == product_name:
+                product_url = shopify_url + product["handle"]
+                return product_url
+        else:
+            return False
 
 
 def buy_item(url):
@@ -133,9 +136,10 @@ def buy_item(url):
     call = client.calls.create(
         to=phone_number,
         from_=twilio_number,
-        url="http://demo.twilio.com/docs/voice.xml",
+        url=twilio_url,
     )
-    print(call.sid)
+    print(f"Attempt to call {phone_number} with SID {call.sid}")
+    hook.send(f"Attempt to call {phone_number} with SID {call.sid}")
 
     # Send Discord Notification
     while True:
@@ -147,8 +151,9 @@ def buy_item(url):
 # Main Program
 
 # Monitoring Loop
-print("====================MONITOR INITIATED====================")
-hook.send("====================MONITOR INITIATED====================")
+host_name = socket.gethostname()
+print(f"===MONITOR INITIATED ON {host_name}===")
+hook.send(f"===MONITOR INITIATED ON {host_name}===")
 is_on = True
 while is_on:
     try:
@@ -156,15 +161,16 @@ while is_on:
         current_time = now.strftime("%H:%M:%S")
         store_url = has_item()
         if store_url != False:
-            print("Product is Available!")
-            hook.send("Product is available!")
+            print(f"[{current_time}]: Attempting to purchase {store_url}...")
+            hook.send(f"[{current_time}]: Attempting to purchase {store_url}...")
             buy_item(store_url)
             is_on = False
+            print(f"===MONITOR STOPPED ON {host_name}===")
+            hook.send(f"===MONITOR STOPPED ON {host_name}===")
         else:
-            print(current_time + " Product Not Yet Available")
-            hook.send(current_time + " Product Not Yet Available")
+            print(f"[{current_time}]: Product/s not yet available.")
             time.sleep(standby_interval)
     except KeyboardInterrupt:
-        print("====================MONITOR STOPPED====================")
-        hook.send("====================MONITOR STOPPED====================")
+        print(f"===MONITOR INTERRUPTED ON {host_name}===")
+        hook.send(f"===MONITOR INTERRUPTED ON {host_name}===")
         break
