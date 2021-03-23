@@ -46,17 +46,15 @@ zip_code = "1337"
 # Main Functions
 
 
-def has_item():
-    r = requests.get(json_url)
-    products = json.loads((r.text))["products"]
+def has_item(products):
     for i in range(len(wanted_items)):
         for product in products:
             product_name = product["title"]
             if wanted_items[i] == product_name:
                 product_url = shopify_url + product["handle"]
                 return product_url
-        else:
-            return False
+    else:
+        return False
 
 
 def buy_item(url):
@@ -158,7 +156,9 @@ while is_on:
     try:
         now = datetime.now()
         current_time = now.strftime("%H:%M:%S")
-        store_url = has_item()
+        r = requests.get(json_url)
+        products = json.loads((r.text))["products"]
+        store_url = has_item(products)
         if store_url is not False:
             print(f"[{current_time}]: Attempting to purchase {store_url}...")
             hook.send(f"[{current_time}]: Attempting to purchase {store_url}...")
