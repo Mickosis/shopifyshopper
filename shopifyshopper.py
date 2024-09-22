@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Feb 26 04:20:00 2021
-
-@author: mickosis
+Shopify Auto-Purchase Script
+Created by Mickosis on Fri Feb 26 04:20:00 2021
 """
 
 import socket
@@ -17,159 +16,117 @@ from dhooks import Webhook
 from datetime import datetime
 
 # Main Configuration
+CONFIG = {
+    "json_url": "https://shopifywebsite.com/products.json",
+    "shopify_url": "https://shopifywebsite.com/products/",
+    "wanted_items": ["Product 1", "Product 2", "Product 3"],
+    "chrome_driver_path": r"/Users/UserName/Desktop/chromedriver",
+    "discord_webhook": "https://discord.com/api/webhooks/",
+    "standby_interval": 180,
+    "twilio": {
+        "account_sid": "account_sid",
+        "auth_token": "auth_token",
+        "to_phone": "phone_number",
+        "from_phone": "twilio_number",
+        "voice_url": "http://demo.twilio.com/docs/voice.xml"
+    },
+    "shipping_info": {
+        "discount_code": "DISC",
+        "email": "mikasa@aot.net",
+        "first_name": "Mikasa",
+        "last_name": "Ackerman",
+        "address_1": "Liberio Internment Zone",
+        "address_2": "Shiganshina",
+        "city": "Wall Rose",
+        "country": "Eldia",
+        "state": "Paradis Island",
+        "zip": "1337"
+    }
+}
 
-json_url = "https://shopifywebsite.com/products.json"
-shopify_url = "https://shopifywebsite.com/products/"
-wanted_items = ["Product 1", "Product 2," "Product 3"]
-chrome_driver_path = r"/Users/UserName/Desktop/chromedriver"
-hook = Webhook("https://discord.com/api/webhooks/")
-standby_interval = 180
-account_sid = "account_sid"
-auth_token = "auth_token"
-phone_number = "phone_number"
-twilio_number = "twilio_number"
-twilio_url = "http://demo.twilio.com/docs/voice.xml"
+hook = Webhook(CONFIG["discord_webhook"])
 
-# Shipping Info
+# Functions
 
-discount_code = "DISC"
-email_address = "mikasa@aot.net"
-first_name = "Mikasa"
-last_name = "Ackerman"
-address_1 = "Liberio Internment Zone"
-address_2 = "Shiganshina"
-city = "Wall Rose"
-country = "Eldia"
-city_state = "Paradis Island"
-zip_code = "1337"
-
-# Main Functions
-
-
-def has_item(products):
-    for i in range(len(wanted_items)):
+def find_product_url(products):
+    """Returns the URL of the wanted product if available."""
+    for item in CONFIG["wanted_items"]:
         for product in products:
-            product_name = product["title"]
-            if wanted_items[i] == product_name:
-                product_url = shopify_url + product["handle"]
-                return product_url
-    else:
-        return False
+            if item == product["title"]:
+                return f"{CONFIG['shopify_url']}{product['handle']}"
+    return None
 
-
-def buy_item(url):
-    # Start Chrome
+def purchase_product(url):
+    """Automates the purchase process using Selenium."""
     chrome_options = Options()
     chrome_options.add_experimental_option("detach", True)
-    driver = webdriver.Chrome(
-        executable_path=chrome_driver_path, chrome_options=chrome_options
-    )
-    driver.get(str(url))
+    
+    driver = webdriver.Chrome(executable_path=CONFIG["chrome_driver_path"], options=chrome_options)
+    driver.get(url)
 
-    # Add Item to Cart
-    driver.find_element_by_xpath(
-        '//button[@class="btn product-form__cart-submit btn--secondary-accent"]'
-    ).click()
+    # Add item to cart and proceed to checkout
+    driver.find_element_by_xpath('//button[contains(@class, "btn--secondary-accent")]').click()
     time.sleep(3)
-    driver.find_element_by_xpath(
-        '//a[@class="cart-popup__cta-link btn btn--secondary-accent"]'
-    ).click()
-    # time.sleep(0.5)
-    driver.find_element_by_xpath(
-        '//input[@class="cart__submit btn btn--small-wide"]'
-    ).click()
-    # time.sleep(0.5)
-    driver.find_element_by_xpath('//input[@placeholder="Discount code"]').send_keys(
-        discount_code
-    )
-    # time.sleep(0.5)
-    driver.find_element_by_xpath('//button[@class="field__input-btn btn"]').click()
-    # time.sleep(0.5)
+    driver.find_element_by_xpath('//a[contains(@class, "cart-popup__cta-link")]').click()
+    driver.find_element_by_xpath('//input[contains(@class, "cart__submit")]').click()
 
-    # Add Shipping Information
-    driver.find_element_by_xpath(
-        '//input[@placeholder="Email or mobile phone number"]'
-    ).send_keys(email_address)
-    # time.sleep(0.5)
-    driver.find_element_by_xpath(
-        '//input[@placeholder="First name (optional)"]'
-    ).send_keys(first_name)
-    # time.sleep(0.5)
-    driver.find_element_by_xpath('//input[@placeholder="Last name"]').send_keys(
-        last_name
-    )
-    # time.sleep(0.5)
-    driver.find_element_by_xpath('//input[@placeholder="Address"]').send_keys(address_1)
-    # time.sleep(0.5)
-    driver.find_element_by_xpath(
-        '//input[@placeholder="Apartment, suite, etc. (optional)"]'
-    ).send_keys(address_2)
-    # time.sleep(0.5)
-    driver.find_element_by_xpath('//input[@placeholder="City"]').send_keys(city)
-    # time.sleep(0.5)
-    driver.find_element_by_xpath('//select[@placeholder="Country/Region"]').send_keys(
-        country
-    )
-    # time.sleep(0.5)
-    driver.find_element_by_xpath('//select[@placeholder="State"]').send_keys(city_state)
-    # time.sleep(0.5)
-    driver.find_element_by_xpath('//input[@placeholder="ZIP code"]').send_keys(zip_code)
-    # time.sleep(0.5)
+    # Apply discount code and fill in shipping details
+    driver.find_element_by_xpath('//input[@placeholder="Discount code"]').send_keys(CONFIG["shipping_info"]["discount_code"])
+    driver.find_element_by_xpath('//button[contains(@class, "field__input-btn")]').click()
 
-    # Check out to PayPal
-    driver.find_element_by_xpath(
-        '//button[@class="step__footer__continue-btn btn"]'
-    ).click()
-    # time.sleep(0.5)
-    driver.find_element_by_xpath(
-        '//button[@class="step__footer__continue-btn btn"]'
-    ).click()
-    # time.sleep(0.5)
-    driver.find_element_by_xpath(
-        '//input[@id="checkout_payment_gateway_46824685701"]'
-    ).click()
-
-    client = Client(account_sid, auth_token)
+    fill_shipping_info(driver)
+    driver.find_element_by_xpath('//button[contains(@class, "step__footer__continue-btn")]').click()
+    
+    # Initiate Twilio call
+    client = Client(CONFIG["twilio"]["account_sid"], CONFIG["twilio"]["auth_token"])
     call = client.calls.create(
-        to=phone_number,
-        from_=twilio_number,
-        url=twilio_url,
+        to=CONFIG["twilio"]["to_phone"],
+        from_=CONFIG["twilio"]["from_phone"],
+        url=CONFIG["twilio"]["voice_url"]
     )
-    print(f"Attempt to call {phone_number} with SID {call.sid}")
-    hook.send(f"Attempt to call {phone_number} with SID {call.sid}")
+    print(f"Attempt to call {CONFIG['twilio']['to_phone']} with SID {call.sid}")
+    hook.send(f"Attempt to call {CONFIG['twilio']['to_phone']} with SID {call.sid}")
 
-    # Send Discord Notification
-    while True:
-        print("Please complete payment!")
-        hook.send("Please complete payment!")
-        time.sleep(3)
-
+def fill_shipping_info(driver):
+    """Fills in the shipping information on the Shopify checkout page."""
+    shipping = CONFIG["shipping_info"]
+    driver.find_element_by_xpath('//input[@placeholder="Email or mobile phone number"]').send_keys(shipping["email"])
+    driver.find_element_by_xpath('//input[@placeholder="First name"]').send_keys(shipping["first_name"])
+    driver.find_element_by_xpath('//input[@placeholder="Last name"]').send_keys(shipping["last_name"])
+    driver.find_element_by_xpath('//input[@placeholder="Address"]').send_keys(shipping["address_1"])
+    driver.find_element_by_xpath('//input[@placeholder="Apartment, suite, etc. (optional)"]').send_keys(shipping["address_2"])
+    driver.find_element_by_xpath('//input[@placeholder="City"]').send_keys(shipping["city"])
+    driver.find_element_by_xpath('//select[@placeholder="Country/Region"]').send_keys(shipping["country"])
+    driver.find_element_by_xpath('//select[@placeholder="State"]').send_keys(shipping["state"])
+    driver.find_element_by_xpath('//input[@placeholder="ZIP code"]').send_keys(shipping["zip"])
 
 # Main Program
 
-# Monitoring Loop
-host_name = socket.gethostname()
-print(f"===MONITOR INITIATED ON {host_name}===")
-hook.send(f"===MONITOR INITIATED ON {host_name}===")
-is_on = True
-while is_on:
-    try:
-        now = datetime.now()
-        current_time = now.strftime("%H:%M:%S")
-        r = requests.get(json_url)
-        products = json.loads((r.text))["products"]
-        store_url = has_item(products)
-        if store_url is not False:
-            print(f"[{current_time}]: Attempting to purchase {store_url}...")
-            hook.send(f"[{current_time}]: Attempting to purchase {store_url}...")
-            buy_item(store_url)
-            is_on = False
-            print(f"===MONITOR STOPPED ON {host_name}===")
-            hook.send(f"===MONITOR STOPPED ON {host_name}===")
-        else:
-            print(f"[{current_time}]: Product/s not yet available.")
-            time.sleep(standby_interval)
-    except KeyboardInterrupt:
-        print(f"===MONITOR INTERRUPTED ON {host_name}===")
-        hook.send(f"===MONITOR INTERRUPTED ON {host_name}===")
-        break
+def main():
+    host_name = socket.gethostname()
+    print(f"=== MONITOR INITIATED ON {host_name} ===")
+    hook.send(f"=== MONITOR INITIATED ON {host_name} ===")
+    
+    while True:
+        try:
+            current_time = datetime.now().strftime("%H:%M:%S")
+            response = requests.get(CONFIG["json_url"])
+            products = response.json()["products"]
+            product_url = find_product_url(products)
+            
+            if product_url:
+                message = f"[{current_time}]: Attempting to purchase {product_url}..."
+                print(message)
+                hook.send(message)
+                purchase_product(product_url)
+                break
+            else:
+                print(f"[{current_time}]: Product/s not yet available.")
+                time.sleep(CONFIG["standby_interval"])
+        except KeyboardInterrupt:
+            print(f"=== MONITOR INTERRUPTED ON {host_name} ===")
+            hook.send(f"=== MONITOR INTERRUPTED ON {host_name} ===")
+            break
+
+if __name__ == "__main__":
+    main()

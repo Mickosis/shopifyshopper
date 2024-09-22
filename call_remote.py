@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon Mar 1 04:20:00 2021
-
-@author: mickosis
+Product Monitor with Twilio Call Notification
+Created by Mickosis on Mon Mar 1 04:20:00 2021
 """
 
 import socket
@@ -15,73 +14,79 @@ from dhooks import Webhook
 from datetime import datetime
 
 # Main Configuration
+CONFIG = {
+    "json_url": "https://shopifywebsite.com/products.json",
+    "wanted_items": ["Product 1", "Product 2", "Product 3"],
+    "discord_webhook": "https://discord.com/api/webhooks/",
+    "aws_webhook": "https://discord.com/api/webhooks/",
+    "standby_interval": 60,
+    "twilio": {
+        "account_sid": "account_sid",
+        "auth_token": "auth_token",
+        "to_phone": "phone_number",
+        "from_phone": "twilio_number",
+        "voice_url": "http://demo.twilio.com/docs/voice.xml"
+    }
+}
 
-json_url = "https://shopifywebsite.com/products.json"
-wanted_items = ["Product 1", "Product 2," "Product 3"]
-hook = Webhook("https://discord.com/api/webhooks/")
-aws_hook = Webhook("https://discord.com/api/webhooks/")
-standby_interval = 60
-account_sid = "account_sid"
-auth_token = "auth_token"
-phone_number = "phone_number"
-twilio_number = "twilio_number"
-twilio_url = "http://demo.twilio.com/docs/voice.xml"
+# Initialize Webhooks
+hook = Webhook(CONFIG["discord_webhook"])
+aws_hook = Webhook(CONFIG["aws_webhook"])
 
-# Main Functions
+# Functions
 
-
-def has_item(products):
-    for i in range(len(wanted_items)):
+def find_wanted_product(products):
+    """Checks if any of the wanted products are available in the product list."""
+    for item in CONFIG["wanted_items"]:
         for product in products:
-            product_name = product["title"]
-            if wanted_items[i] == product_name:
-                return product_name
-    else:
-        return False
+            if item == product["title"]:
+                return product["title"]
+    return False
 
-
-def call_user():
-    for i in range(1, 6):
-        client = Client(account_sid, auth_token)
+def call_user(client):
+    """Attempts to call the user via Twilio."""
+    for attempt in range(1, 6):
         call = client.calls.create(
-            to=phone_number,
-            from_=twilio_number,
-            url=twilio_url,
+            to=CONFIG["twilio"]["to_phone"],
+            from_=CONFIG["twilio"]["from_phone"],
+            url=CONFIG["twilio"]["voice_url"]
         )
-        print(f"[{i}] Attempt to call {phone_number} with SID {call.sid}")
-        hook.send(f"[{i}] Attempt to call {phone_number} with SID {call.sid}")
-        time.sleep(standby_interval)
-
+        message = f"[{attempt}] Attempt to call {CONFIG['twilio']['to_phone']} with SID {call.sid}"
+        print(message)
+        hook.send(message)
+        time.sleep(CONFIG["standby_interval"])
 
 # Main Program
 
-# Monitoring Loop
-host_name = socket.gethostname()
-print(f"===MONITOR INITIATED ON {host_name}===")
-hook.send(f"===MONITOR INITIATED ON {host_name}===")
-is_on = True
-while is_on:
-    try:
-        now = datetime.now()
-        current_time = now.strftime("%H:%M:%S")
-        r = requests.get(json_url)
-        products = json.loads((r.text))["products"]
-        item_name = has_item(products)
-        if item_name is not False:
-            print(f"[{current_time}]: Product {item_name} is available!")
-            hook.send(f"[{current_time}]: Product {item_name} is available!")
-            aws_hook.send(f"[{current_time}]: Product {item_name} is available!")
-            call_user()
-            is_on = False
-            print(f"===MONITOR STOPPED ON {host_name}===")
-            hook.send(f"===MONITOR STOPPED ON {host_name}===")
-        else:
-            print(f"[{current_time}] [{len(products)}]: Product/s not yet available.")
-            aws_hook.send(
-                f"[{current_time}] [{len(products)}]: Product/s not yet available."
-            )
-            time.sleep(standby_interval)
-    except KeyboardInterrupt:
-        print(f"===MONITOR INTERRUPTED ON {host_name}===")
-        hook.send(f"===MONITOR INTERRUPTED ON {host_name}===")
-        break
+def main():
+    host_name = socket.gethostname()
+    print(f"=== MONITOR INITIATED ON {host_name} ===")
+    hook.send(f"=== MONITOR INITIATED ON {host_name} ===")
+    
+    client = Client(CONFIG["twilio"]["account_sid"], CONFIG["twilio"]["auth_token"])
+    
+    while True:
+        try:
+            current_time = datetime.now().strftime("%H:%M:%S")
+            response = requests.get(CONFIG["json_url"])
+            products = response.json()["products"]
+            product_name = find_wanted_product(products)
+            
+            if product_name:
+                message = f"[{current_time}]: Product {product_name} is available!"
+                print(message)
+                hook.send(message)
+                aws_hook.send(message)
+                call_user(client)
+                break
+            else:
+                print(f"[{current_time}] [{len(products)} products]: Not available.")
+                aws_hook.send(f"[{current_time}] [{len(products)} products]: Not available.")
+                time.sleep(CONFIG["standby_interval"])
+        except KeyboardInterrupt:
+            print(f"=== MONITOR INTERRUPTED ON {host_name} ===")
+            hook.send(f"=== MONITOR INTERRUPTED ON {host_name} ===")
+            break
+
+if __name__ == "__main__":
+    main()
