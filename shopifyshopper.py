@@ -7,7 +7,6 @@ Created by Mickosis on Fri Feb 26 04:20:00 2021
 
 import socket
 import requests
-import json
 import time
 from twilio.rest import Client
 from selenium import webdriver
@@ -50,42 +49,42 @@ hook = Webhook(CONFIG["discord_webhook"])
 
 def find_product_url(products):
     """Returns the URL of the wanted product if available."""
-    for item in CONFIG["wanted_items"]:
-        for product in products:
-            if item == product["title"]:
-                return f"{CONFIG['shopify_url']}{product['handle']}"
+    for product in products:
+        if product["title"] in CONFIG["wanted_items"]:
+            return f"{CONFIG['shopify_url']}{product['handle']}"
     return None
 
 def purchase_product(url):
     """Automates the purchase process using Selenium."""
+    with webdriver.Chrome(executable_path=CONFIG["chrome_driver_path"], options=create_chrome_options()) as driver:
+        driver.get(url)
+        add_to_cart(driver)
+        fill_checkout(driver)
+        initiate_twilio_call()
+
+def create_chrome_options():
+    """Create and return Chrome options."""
     chrome_options = Options()
     chrome_options.add_experimental_option("detach", True)
-    
-    driver = webdriver.Chrome(executable_path=CONFIG["chrome_driver_path"], options=chrome_options)
-    driver.get(url)
+    return chrome_options
 
-    # Add item to cart and proceed to checkout
+def add_to_cart(driver):
+    """Adds the item to the cart and proceeds to checkout."""
     driver.find_element_by_xpath('//button[contains(@class, "btn--secondary-accent")]').click()
     time.sleep(3)
     driver.find_element_by_xpath('//a[contains(@class, "cart-popup__cta-link")]').click()
     driver.find_element_by_xpath('//input[contains(@class, "cart__submit")]').click()
 
-    # Apply discount code and fill in shipping details
-    driver.find_element_by_xpath('//input[@placeholder="Discount code"]').send_keys(CONFIG["shipping_info"]["discount_code"])
-    driver.find_element_by_xpath('//button[contains(@class, "field__input-btn")]').click()
-
+def fill_checkout(driver):
+    """Fills in the checkout form with shipping information."""
+    apply_discount(driver)
     fill_shipping_info(driver)
     driver.find_element_by_xpath('//button[contains(@class, "step__footer__continue-btn")]').click()
-    
-    # Initiate Twilio call
-    client = Client(CONFIG["twilio"]["account_sid"], CONFIG["twilio"]["auth_token"])
-    call = client.calls.create(
-        to=CONFIG["twilio"]["to_phone"],
-        from_=CONFIG["twilio"]["from_phone"],
-        url=CONFIG["twilio"]["voice_url"]
-    )
-    print(f"Attempt to call {CONFIG['twilio']['to_phone']} with SID {call.sid}")
-    hook.send(f"Attempt to call {CONFIG['twilio']['to_phone']} with SID {call.sid}")
+
+def apply_discount(driver):
+    """Applies the discount code."""
+    driver.find_element_by_xpath('//input[@placeholder="Discount code"]').send_keys(CONFIG["shipping_info"]["discount_code"])
+    driver.find_element_by_xpath('//button[contains(@class, "field__input-btn")]').click()
 
 def fill_shipping_info(driver):
     """Fills in the shipping information on the Shopify checkout page."""
@@ -100,6 +99,18 @@ def fill_shipping_info(driver):
     driver.find_element_by_xpath('//select[@placeholder="State"]').send_keys(shipping["state"])
     driver.find_element_by_xpath('//input[@placeholder="ZIP code"]').send_keys(shipping["zip"])
 
+def initiate_twilio_call():
+    """Initiates a Twilio call."""
+    client = Client(CONFIG["twilio"]["account_sid"], CONFIG["twilio"]["auth_token"])
+    call = client.calls.create(
+        to=CONFIG["twilio"]["to_phone"],
+        from_=CONFIG["twilio"]["from_phone"],
+        url=CONFIG["twilio"]["voice_url"]
+    )
+    message = f"Attempt to call {CONFIG['twilio']['to_phone']} with SID {call.sid}"
+    print(message)
+    hook.send(message)
+
 # Main Program
 
 def main():
@@ -110,8 +121,7 @@ def main():
     while True:
         try:
             current_time = datetime.now().strftime("%H:%M:%S")
-            response = requests.get(CONFIG["json_url"])
-            products = response.json()["products"]
+            products = fetch_products()
             product_url = find_product_url(products)
             
             if product_url:
@@ -127,6 +137,11 @@ def main():
             print(f"=== MONITOR INTERRUPTED ON {host_name} ===")
             hook.send(f"=== MONITOR INTERRUPTED ON {host_name} ===")
             break
+
+def fetch_products():
+    """Fetches product data from the Shopify API."""
+    response = requests.get(CONFIG["json_url"])
+    return response.json().get("products", [])
 
 if __name__ == "__main__":
     main()
